@@ -336,6 +336,7 @@ public class AdjusterUI extends Canvas
 		
 		final Frame f = new Frame("Image adjuster");
 		AdjusterUI adj = new AdjusterUI();
+		adj.setPreferredSize(new Dimension(Math.max(sum.width, 24), Math.max(sum.height, 24)));
 		adj.exportFilenamePrefix = sceneName + (avgSpp == 0 ? "" : "-"+avgSpp);
 		adj.setExposure(sum);
 		f.add(adj);
