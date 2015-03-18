@@ -401,12 +401,10 @@ public class AdjusterUI extends Canvas
 					float red = dis.readFloat();
 					float green = dis.readFloat();
 					float blue = dis.readFloat();
-					System.err.println("Red: "+red+"; weight="+exposure);
 					++samplesRead;
 					
 					int px = (int)(psX * sum.width);
 					int py = (int)(psY * sum.height);
-					System.err.println(px+","+py);
 					if(
 						px < 0 || px >= sum.width ||
 						py < 0 || py >= sum.height
