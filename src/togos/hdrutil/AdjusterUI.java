@@ -14,6 +14,8 @@ import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
+import java.io.DataInputStream;
+import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
 
@@ -296,8 +298,28 @@ public class AdjusterUI extends Canvas
 		String sceneName = null;
 		HDRExposure sum = null;
 		int avgSpp = 0;
-		for( String arg : args ) {
-			if( arg.endsWith(".dump") ) {
+		
+		// Can be used when a dump is not loaded.
+		boolean followTraceDump = true;
+		int width = 240;
+		int height = 160;
+		double aspectRatio = width/height;
+		
+		for( int i=0; i<args.length; ++i ) {
+			String arg = args[i];
+			if( "-follow-trace-dump".equals(arg) ) {
+				followTraceDump = true;
+			} else if( "-ar".equals(arg) ) {
+				String arString = args[++i];
+				String[] arParts = arString.split(":");
+				if( arParts.length == 1 ) {
+					aspectRatio = Double.parseDouble(arString);
+				} else {
+					aspectRatio =
+						Double.parseDouble(arParts[0]) /
+						Double.parseDouble(arParts[1]);
+				}
+			} else if( arg.endsWith(".dump") ) {
 				String dumpFilename = arg;
 				File dumpFile = new File(dumpFilename);
 				sceneName = dumpFile.getName();
@@ -336,6 +358,10 @@ public class AdjusterUI extends Canvas
 			}
 		}
 		
+		if( sum == null && followTraceDump ) {
+			sum = new HDRExposure(width, height);
+		}
+		
 		if( sum == null ) {
 			System.err.println("No dumps specified!");
 			System.exit(1);
@@ -359,5 +385,53 @@ public class AdjusterUI extends Canvas
 				f.dispose();
 			}
 		});
+		
+		if( followTraceDump ) {
+			DataInputStream dis = new DataInputStream(System.in);
+			long samplesRead = 0;
+			boolean needsRecalc = false;
+			try {
+				while( true ) {
+					float psX = dis.readFloat();
+					float psY = dis.readFloat();
+					// Ignore offset (3 floats), direction (3 floats), and frequency (1 float)
+					for( int i=3+3+1-1; i>=0; --i ) dis.readFloat();
+					
+					float exposure = dis.readFloat();
+					float red = dis.readFloat();
+					float green = dis.readFloat();
+					float blue = dis.readFloat();
+					System.err.println("Red: "+red+"; weight="+exposure);
+					++samplesRead;
+					
+					int px = (int)(psX * sum.width);
+					int py = (int)(psY * sum.height);
+					System.err.println(px+","+py);
+					if(
+						px < 0 || px >= sum.width ||
+						py < 0 || py >= sum.height
+					) continue;
+					
+					int idx = sum.width * py + px;
+					sum.r[idx] += red;
+					sum.g[idx] += green;
+					sum.b[idx] += blue;
+					sum.e[idx] += exposure;
+					needsRecalc = true;
+					
+					if( samplesRead % (sum.height * sum.width) == 0 ) {
+						System.err.println(samplesRead+" samples read; updating");
+						adj.setExposure(sum);
+						needsRecalc = false;
+					}
+				}
+			} catch( EOFException e ) {
+				if( needsRecalc ) {
+					adj.setExposure(sum);
+					needsRecalc = false;
+				}
+				System.err.println("End of dump reached.  "+samplesRead+" samples read");
+			}
+		}
 	}
 }
