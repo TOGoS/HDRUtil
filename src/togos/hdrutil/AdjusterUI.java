@@ -7,6 +7,8 @@ import java.awt.Frame;
 import java.awt.Graphics;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.event.HierarchyEvent;
+import java.awt.event.HierarchyListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
@@ -49,7 +51,7 @@ public class AdjusterUI extends Canvas
 		protected void kick( boolean realHard ) {
 			if( !this.isAlive() ) start();
 			else if( realHard ) interrupt();
-			else notifyAll();
+			else synchronized(this) { notifyAll(); }
 		}
 		
 		boolean needsRecalculation = true;
@@ -111,6 +113,14 @@ public class AdjusterUI extends Canvas
 		setBackground(Color.BLACK);
 		addComponentListener(new ComponentAdapter() {
 			@Override public void componentShown(ComponentEvent e) {
+				recalculationThread.kick( false );
+			}
+		});
+		// componentShown won't always get called when we need it
+		// to due to it actually being a parent component that gets
+		// shown.  This seems to catch those cases:
+		addHierarchyListener(new HierarchyListener() {
+			@Override public void hierarchyChanged(HierarchyEvent e) {
 				recalculationThread.kick( false );
 			}
 		});
@@ -198,7 +208,7 @@ public class AdjusterUI extends Canvas
 		this.hdrExposure = exp;
 		exposureUpdated();
 	}
-		
+	
 	@Override public void paint( Graphics g ) {
 		if( hdrImage == null ) {
 			g.setColor(Color.BLACK);
