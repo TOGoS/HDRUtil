@@ -59,6 +59,16 @@ public class HDRExposure
 			e[i] = r[i] = g[i] = b[i] = 0;
 		}
 	}
+
+	public void multiply(double scale) {
+		if( scale == 1 ) return;
+		for( int i=width*height-1; i>=0; --i ) {
+			r[i] *= scale;
+			g[i] *= scale;
+			b[i] *= scale;
+			e[i] *= scale;
+		}
+	}
 	
 	public double getAverageExposure() {
 		double sum = 0;

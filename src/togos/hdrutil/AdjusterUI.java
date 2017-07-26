@@ -304,11 +304,15 @@ public class AdjusterUI extends Canvas
 		int width = 240;
 		int height = 160;
 		double aspectRatio = width/height;
+		double weight = 1;
 		
 		for( int i=0; i<args.length; ++i ) {
 			String arg = args[i];
 			if( "-follow-trace-dump".equals(arg) ) {
 				followTraceDump = true;
+			} else if( "-weight".equals(arg) ) {
+				// Indicate weight for next image loaded
+				weight = Double.parseDouble(args[++i]);
 			} else if( "-ar".equals(arg) ) {
 				String arString = args[++i];
 				String[] arParts = arString.split(":");
@@ -326,6 +330,7 @@ public class AdjusterUI extends Canvas
 				sceneName = sceneName.substring(0, sceneName.length()-5);
 				System.err.println("Loading "+dumpFile+"...");
 				HDRExposure exp = ChunkyDump.loadExposure(dumpFile);
+				exp.multiply(weight);
 				System.err.println("  -> "+exp.width+"x"+exp.height);
 				if( exp.e.length > 0 ) {
 					// Don't bother averaging; chunky dumps have the same spp everywhere
@@ -342,6 +347,7 @@ public class AdjusterUI extends Canvas
 				sceneName = sceneName.substring(0, sceneName.length()-5);
 				System.err.println("Loading "+rgbeFile+"...");
 				HDRExposure exp = RGBE.loadExposureFromRawRgbe(rgbeFile);
+				exp.multiply(weight);
 				System.err.println("  -> "+exp.width+"x"+exp.height);
 				if( exp.e.length > 0 ) {
 					// Don't bother averaging; RGBE files have the same spp everywhere
